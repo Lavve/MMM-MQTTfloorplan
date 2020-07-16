@@ -55,6 +55,11 @@ Module.register('MMM-MQTTfloorplan', {
       defaultColor: 'grey', // css format
       defaultSize: 'medium', // value of font-size style, e.g. xx-small, x-small, small, medium, large, x-large, xx-large, 1.2em, 20px
     },
+    speaker: {
+      image: 'speaker_tiny.png',
+      width: 18,
+      height: 24,
+    },
 
     subscriptions: [
       // Some examples of allowable entries in the Config file:
@@ -116,10 +121,10 @@ Module.register('MMM-MQTTfloorplan', {
 
   socketNotificationReceived: function (notification, payload) {
     if (notification === 'MQTT_PAYLOAD') {
-      if (payload != null) {
+      if (payload !== null) {
         var config = {};
         for (i = 0; i < this.config.subscriptions.length; i++) {
-          if (this.config.subscriptions[i].topic == payload.topic) {
+          if (this.config.subscriptions[i].topic === payload.topic) {
             var value = payload.value;
             this.config.subscriptions[i].lastChanged = Date.now();
 
@@ -145,14 +150,14 @@ Module.register('MMM-MQTTfloorplan', {
 
     var element = document.getElementById('mqtt_' + index);
 
-    if (config.type == 'light') {
+    if (config.type === 'light') {
       var visible =
         state.includes('TRUE') ||
         state.includes('ON') ||
         state.includes('OPEN') ||
         (!isNaN(parseInt(state)) && parseInt(state) > 0);
       this.setVisible('mqtt_' + index, visible);
-    } else if (config.type == 'motion') {
+    } else if (config.type === 'motion') {
       var visible =
         state.includes('TRUE') ||
         state.includes('ON') ||
@@ -164,7 +169,7 @@ Module.register('MMM-MQTTfloorplan', {
         if (this.config.timerVars[index]) {
           clearInterval(this.config.timerVars[index]); // Reset any fade timers that might be running
         }
-      } else if (element.style.display != 'none') {
+      } else if (element.style.display !== 'none') {
         // Don't just set the icon invisible for motion - start a fade-out decay
         // Multiply fade interval by 100 rather than 1000 to get 10 steps on way to total delay
         // console.log("Starting decay timer for index " + String(index) + " named " + config.label);
@@ -176,7 +181,7 @@ Module.register('MMM-MQTTfloorplan', {
           config
         );
       }
-    } else if (config.type == 'door') {
+    } else if (config.type === 'door') {
       var closed =
         state.includes('FALSE') ||
         state.includes('OFF') ||
@@ -185,7 +190,7 @@ Module.register('MMM-MQTTfloorplan', {
 
       image = closed ? this.config.door.imageClosed : this.config.door.imageOpen;
 
-      if (element != null) {
+      if (element !== null) {
         element.innerHTML =
           "<img src='" +
           this.file('/images/' + image) +
@@ -201,15 +206,16 @@ Module.register('MMM-MQTTfloorplan', {
       // if (config.display.counterwindow !== 'undefined' && config.display.radius !== 'undefined') {
       // 	this.setVisible("mqtt_" + index + "_counterwindow", visible);
       // }
-    } else if (config.type == 'label') {
-      if (element != null) {
+    } else if (config.type === 'label') {
+      if (element !== null) {
         element.innerHTML = this.formatLabel(state, config);
       }
-    } else if (config.type == 'gates') {
+    } else if (config.type === 'gates') {
       var closed =
-        state.includes('OFF') ||
-        state.includes('CLOSED') ||
-        (!isNaN(parseInt(state)) && (parseInt(state) == 0 || parseInt(state) == 23));
+          state.includes('OFF') ||
+          state.includes('CLOSED') ||
+          (!isNaN(parseInt(state)) && (parseInt(state) === 0 || parseInt(state) === 23)),
+        image;
 
       if (config.display.tiny) {
         image = closed ? this.config.gates.imageClosedTiny : this.config.gates.imageOpenTiny;
@@ -217,9 +223,14 @@ Module.register('MMM-MQTTfloorplan', {
         image = closed ? this.config.gates.imageClosed : this.config.gates.imageOpen;
       }
 
-      if (element != null) {
+      if (element !== null) {
         element.innerHTML = "<img src='" + this.file('/images/' + image) + "' />";
       }
+    } else if (config.type === 'speaker') {
+      var visible = state.includes('FALSE'),
+        image = this.config.gates.imageSpeaker;
+
+      this.setVisible('mqtt_' + index, visible);
     }
   },
 
@@ -258,7 +269,7 @@ Module.register('MMM-MQTTfloorplan', {
 
   setVisible: function (id, value) {
     var element = document.getElementById(id);
-    if (element != null) {
+    if (element !== null) {
       element.style.display = value ? 'block' : 'none';
       element.style.opacity = 1;
     }
@@ -271,11 +282,12 @@ Module.register('MMM-MQTTfloorplan', {
 
       display.label = this.config.subscriptions[index].label;
 
-      if (type == 'door') floorplan.appendChild(this.getDoorDivImage(index, display));
-      if (type == 'light') floorplan.appendChild(this.getLightDiv(index, display));
-      if (type == 'label') floorplan.appendChild(this.getLabelDiv(index, display));
-      if (type == 'gates') floorplan.appendChild(this.getGatesDiv(index, display));
-      if (type == 'motion') floorplan.appendChild(this.getMotionDiv(index, display));
+      if (type === 'door') floorplan.appendChild(this.getDoorDivImage(index, display));
+      if (type === 'light') floorplan.appendChild(this.getLightDiv(index, display));
+      if (type === 'label') floorplan.appendChild(this.getLabelDiv(index, display));
+      if (type === 'gates') floorplan.appendChild(this.getGatesDiv(index, display));
+      if (type === 'motion') floorplan.appendChild(this.getMotionDiv(index, display));
+      if (type === 'speaker') floorplan.appendChild(this.getSpeakerDiv(index, display));
     }
   },
 
@@ -434,6 +446,39 @@ Module.register('MMM-MQTTfloorplan', {
       this.config.door.height +
       'px;width:' +
       this.config.door.width +
+      "px;'/>";
+    return el;
+  },
+
+  getSpeakerDiv: function (index, position) {
+    // set style: display
+    var style =
+      'margin-left:' +
+      position.left +
+      'px;margin-top:' +
+      position.top +
+      'px;position:absolute;' +
+      'height:' +
+      this.config.light.height +
+      'px;width:' +
+      this.config.light.width +
+      'px;';
+
+    // create div, set style and text
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__speaker');
+    el.setAttribute('data-name', position.label);
+    el.style.cssText = style;
+    el.style.display = this.config.light.defaultStatus;
+    el.innerHTML =
+      "<img src='" +
+      this.file('/images/' + this.config.light.image) +
+      "' style='" +
+      'height:' +
+      this.config.light.height +
+      'px;width:' +
+      this.config.light.width +
       "px;'/>";
     return el;
   },
