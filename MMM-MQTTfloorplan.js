@@ -228,7 +228,7 @@ Module.register('MMM-MQTTfloorplan', {
         element.innerHTML = "<img src='" + this.file('/images/' + image) + "' />";
       }
     } else if (config.type === 'speaker') {
-      var visible = state.includes('FALSE'),
+      var visible = state.includes('TRUE'),
         image = this.config.gates.imageSpeaker;
 
       this.setVisible('mqtt_' + index, visible);
