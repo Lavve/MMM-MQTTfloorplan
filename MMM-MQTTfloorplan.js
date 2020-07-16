@@ -364,7 +364,7 @@ Module.register('MMM-MQTTfloorplan', {
     el.classList.add('MQTT-floorplan__label');
     el.setAttribute('data-name', labelConfig.label);
     el.style.cssText = style;
-    el.innerHTML = '&lsqb;' + labelConfig.label + '&rsqb;';
+    el.innerHTML = '&hellip; &hellip;';
     return el;
   },
 
