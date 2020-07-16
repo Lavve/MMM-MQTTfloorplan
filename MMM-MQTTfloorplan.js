@@ -59,6 +59,7 @@ Module.register('MMM-MQTTfloorplan', {
       image: 'speaker_tiny.png',
       width: 18,
       height: 24,
+      defaultStatus: 'none',
     },
 
     subscriptions: [
@@ -470,15 +471,15 @@ Module.register('MMM-MQTTfloorplan', {
     el.classList.add('MQTT-floorplan__speaker');
     el.setAttribute('data-name', position.label);
     el.style.cssText = style;
-    el.style.display = this.config.light.defaultStatus;
+    el.style.display = this.config.speaker.defaultStatus;
     el.innerHTML =
       "<img src='" +
-      this.file('/images/' + this.config.light.image) +
+      this.file('/images/' + this.config.speaker.image) +
       "' style='" +
       'height:' +
-      this.config.light.height +
+      this.config.speaker.height +
       'px;width:' +
-      this.config.light.width +
+      this.config.speaker.width +
       "px;'/>";
     return el;
   },
