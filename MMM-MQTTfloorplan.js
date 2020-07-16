@@ -37,8 +37,8 @@ Module.register('MMM-MQTTfloorplan', {
       defaultColor: 'blue', // css format, i.e. color names or color codes
       imageClosed: 'closed-door-tiny.png', // located in subfolder 'images'
       imageOpen: 'open-door-tiny.png', // located in subfolder 'images'
-      width: 32, // image width
-      height: 43, // image height
+      width: 22, // image width
+      height: 33, // image height
     },
     motion: {
       // Default display settings for objects of this type
