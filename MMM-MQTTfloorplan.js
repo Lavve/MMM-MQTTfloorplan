@@ -85,6 +85,10 @@ Module.register('MMM-MQTTfloorplan', {
     return [this.file('node_modules/jsonpointer/jsonpointer.js')];
   },
 
+  getStyles: function () {
+    return ['MMM-MQTTfloorplan.css'];
+  },
+
   start: function () {
     console.log('Starting module: ' + this.name + ' with ' + this.config.subscriptions.length + ' topics');
 
@@ -105,6 +109,7 @@ Module.register('MMM-MQTTfloorplan', {
       this.config.floorplan.height +
       'px;';
 
+    floorplan.classList.add('MQTT-floorplan__wrapper');
     this.appendSensors(floorplan);
     return floorplan;
   },
@@ -135,11 +140,10 @@ Module.register('MMM-MQTTfloorplan', {
     }
   },
 
-  updateDivForItem: function (item, state, config) {
+  updateDivForItem: function (index, state, config) {
     // Adjust display acccording to the type of thing that we're dealing with
 
-    var element = document.getElementById('mqtt_' + item);
-    console.log(config, state);
+    var element = document.getElementById('mqtt_' + index);
 
     if (config.type == 'light') {
       var visible =
@@ -147,7 +151,7 @@ Module.register('MMM-MQTTfloorplan', {
         state.includes('ON') ||
         state.includes('OPEN') ||
         (!isNaN(parseInt(state)) && parseInt(state) > 0);
-      this.setVisible('mqtt_' + item, visible);
+      this.setVisible('mqtt_' + index, visible);
     } else if (config.type == 'motion') {
       var visible =
         state.includes('TRUE') ||
@@ -156,18 +160,18 @@ Module.register('MMM-MQTTfloorplan', {
         (!isNaN(parseInt(state)) && parseInt(state) > 0);
 
       if (visible) {
-        this.setVisible('mqtt_' + item, visible);
-        if (this.config.timerVars[item]) {
-          clearInterval(this.config.timerVars[item]); // Reset any fade timers that might be running
+        this.setVisible('mqtt_' + index, visible);
+        if (this.config.timerVars[index]) {
+          clearInterval(this.config.timerVars[index]); // Reset any fade timers that might be running
         }
       } else if (element.style.display != 'none') {
         // Don't just set the icon invisible for motion - start a fade-out decay
         // Multiply fade interval by 100 rather than 1000 to get 10 steps on way to total delay
-        // console.log("Starting decay timer for item " + String(item) + " named " + config.label);
-        this.config.timerVars[item] = setInterval(
+        // console.log("Starting decay timer for index " + String(index) + " named " + config.label);
+        this.config.timerVars[index] = setInterval(
           this.fadeMotionImage,
           this.config.motion.fadeIntervalS * 100,
-          item,
+          index,
           this.config.motion.fadeIntervalS,
           config
         );
@@ -193,9 +197,9 @@ Module.register('MMM-MQTTfloorplan', {
           "px;'/>";
       }
       // This will hide the image for an open door if it's a Quadrant type
-      // this.setVisible("mqtt_" + item, visible);
+      // this.setVisible("mqtt_" + index, visible);
       // if (config.display.counterwindow !== 'undefined' && config.display.radius !== 'undefined') {
-      // 	this.setVisible("mqtt_" + item + "_counterwindow", visible);
+      // 	this.setVisible("mqtt_" + index + "_counterwindow", visible);
       // }
     } else if (config.type == 'label') {
       if (element != null) {
@@ -219,22 +223,22 @@ Module.register('MMM-MQTTfloorplan', {
     }
   },
 
-  fadeMotionImage: function (item, fadeIntervalS, config) {
+  fadeMotionImage: function (index, fadeIntervalS, config) {
     // Inside this function, 'this' seems to have the scope of the whole Magic Mirror, not just this module
     // Must be because the SetInterval function is a Window level operation ?
     // Means that you can't easily use variables of this module.
 
     // Get interval in seconds since motion was last seen
-    // console.log("Fading motion image for item " + String(item) );
+    // console.log("Fading motion image for index " + String(index) );
     // console.log("Config of " + JSON.stringify(config) );
     // console.log("Lastchanged of " + String(config.lastChanged ));
     interval = (Date.now() - config.lastChanged) / 1000;
     opacityVal = 1 - interval / fadeIntervalS;
 
-    var element = document.getElementById('mqtt_' + item);
+    var element = document.getElementById('mqtt_' + index);
     element.style.opacity = opacityVal <= 0 ? 0 : opacityVal;
     if (element.style.opacity <= 0) {
-      // clearInterval(this.config.timerVars[item]);
+      // clearInterval(this.config.timerVars[index]);
       // Cannot get a reference to the handle inside here to clear the Interval
     }
   },
@@ -261,19 +265,21 @@ Module.register('MMM-MQTTfloorplan', {
   },
 
   appendSensors: function (floorplan) {
-    for (var item in this.config.subscriptions) {
-      var display = this.config.subscriptions[item].display;
-      var type = this.config.subscriptions[item].type;
+    for (var index in this.config.subscriptions) {
+      var display = this.config.subscriptions[index].display;
+      var type = this.config.subscriptions[index].type;
 
-      if (type == 'door') floorplan.appendChild(this.getDoorDivImage(item, display));
-      if (type == 'light') floorplan.appendChild(this.getLightDiv(item, display));
-      if (type == 'label') floorplan.appendChild(this.getLabelDiv(item, display));
-      if (type == 'gates') floorplan.appendChild(this.getGatesDiv(item, display));
-      if (type == 'motion') floorplan.appendChild(this.getMotionDiv(item, display));
+      display.label = this.config.subscriptions[index].label;
+
+      if (type == 'door') floorplan.appendChild(this.getDoorDivImage(index, display));
+      if (type == 'light') floorplan.appendChild(this.getLightDiv(index, display));
+      if (type == 'label') floorplan.appendChild(this.getLabelDiv(index, display));
+      if (type == 'gates') floorplan.appendChild(this.getGatesDiv(index, display));
+      if (type == 'motion') floorplan.appendChild(this.getMotionDiv(index, display));
     }
   },
 
-  getLightDiv: function (item, position) {
+  getLightDiv: function (index, position) {
     // set style: display
     var style =
       'margin-left:' +
@@ -288,11 +294,13 @@ Module.register('MMM-MQTTfloorplan', {
       'px;';
 
     // create div, set style and text
-    var lightDiv = document.createElement('div');
-    lightDiv.id = 'mqtt_' + item;
-    lightDiv.style.cssText = style;
-    lightDiv.style.display = this.config.light.defaultStatus;
-    lightDiv.innerHTML =
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__light');
+    el.setAttribute('data-name', position.label);
+    el.style.cssText = style;
+    el.style.display = this.config.light.defaultStatus;
+    el.innerHTML =
       "<img src='" +
       this.file('/images/' + this.config.light.image) +
       "' style='" +
@@ -301,10 +309,10 @@ Module.register('MMM-MQTTfloorplan', {
       'px;width:' +
       this.config.light.width +
       "px;'/>";
-    return lightDiv;
+    return el;
   },
 
-  getGatesDiv: function (item, position) {
+  getGatesDiv: function (index, position) {
     // set style: display
     width = position.tiny ? this.config.gates.widthTiny : this.config.gates.width;
     height = position.tiny ? this.config.gates.heightTiny : this.config.gates.height;
@@ -322,11 +330,13 @@ Module.register('MMM-MQTTfloorplan', {
       'px;';
 
     // create div, set style and text
-    var gatesDiv = document.createElement('div');
-    gatesDiv.id = 'mqtt_' + item;
-    gatesDiv.style.cssText = style;
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__gate');
+    el.setAttribute('data-name', position.label);
+    el.style.cssText = style;
     image = position.tiny ? this.config.gates.imageClosedTiny : this.config.gates.imageClosed;
-    gatesDiv.innerHTML =
+    el.innerHTML =
       "<img src='" +
       this.file('/images/' + image) +
       "' style='" +
@@ -335,10 +345,10 @@ Module.register('MMM-MQTTfloorplan', {
       'px;width:' +
       width +
       "px;'/>";
-    return gatesDiv;
+    return el;
   },
 
-  getLabelDiv: function (item, labelConfig) {
+  getLabelDiv: function (index, labelConfig) {
     // default color and size, but may be overridden for each label
     var color = this.getSpecificOrDefault(labelConfig.color, this.config.label.defaultColor);
     var size = this.getSpecificOrDefault(labelConfig.size, this.config.label.defaultSize);
@@ -349,14 +359,16 @@ Module.register('MMM-MQTTfloorplan', {
     style += 'color:' + color + ';font-size:' + size + ';';
 
     // create div, set style and text
-    var labelDiv = document.createElement('div');
-    labelDiv.id = 'mqtt_' + item;
-    labelDiv.style.cssText = style;
-    labelDiv.innerHTML = '&lt;' + item + '&gt;';
-    return labelDiv;
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__label');
+    el.setAttribute('data-name', labelConfig.label);
+    el.style.cssText = style;
+    el.innerHTML = '&lsqb;' + labelConfig.label + '&rsqb;';
+    return el;
   },
 
-  getMotionDiv: function (item, position) {
+  getMotionDiv: function (index, position) {
     width = position.tiny ? this.config.motion.widthTiny : this.config.motion.width;
     height = position.tiny ? this.config.motion.heightTiny : this.config.motion.height;
     image = position.tiny ? this.config.motion.imageTiny : this.config.motion.image;
@@ -375,11 +387,13 @@ Module.register('MMM-MQTTfloorplan', {
       'px;';
 
     // create div, set style and text
-    var motionDiv = document.createElement('div');
-    motionDiv.id = 'mqtt_' + item;
-    motionDiv.style.cssText = style;
-    motionDiv.style.display = 'none'; // Always default to hidden - only display if get a message
-    motionDiv.innerHTML =
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__motion');
+    el.setAttribute('data-name', position.label);
+    el.style.cssText = style;
+    el.style.display = 'none'; // Always default to hidden - only display if get a message
+    el.innerHTML =
       "<img src='" +
       this.file('/images/' + image) +
       "' style='" +
@@ -388,10 +402,10 @@ Module.register('MMM-MQTTfloorplan', {
       'px;width:' +
       width +
       "px;'/>";
-    return motionDiv;
+    return el;
   },
 
-  getDoorDivImage: function (item, position) {
+  getDoorDivImage: function (index, position) {
     // set style: display
     // This version handles doors as images, not quadrants of a circle
     var style =
@@ -407,10 +421,12 @@ Module.register('MMM-MQTTfloorplan', {
       'px;';
 
     // create div, set style and text
-    var doorDiv = document.createElement('div');
-    doorDiv.id = 'mqtt_' + item;
-    doorDiv.style.cssText = style;
-    doorDiv.innerHTML =
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__door');
+    el.setAttribute('data-name', position.label);
+    el.style.cssText = style;
+    el.innerHTML =
       "<img src='" +
       this.file('/images/' + this.config.door.imageClosed) +
       "' style='" +
@@ -419,55 +435,7 @@ Module.register('MMM-MQTTfloorplan', {
       'px;width:' +
       this.config.door.width +
       "px;'/>";
-    return doorDiv;
-  },
-
-  getDoorDivQuadrant: function (item, doorConfig) {
-    // This function draws a quadrant (or two) for doors, instead of using an image
-    // Currently not used, so not fully implemented
-    // default color, but may be overridden for each door
-    var color = this.getSpecificOrDefault(doorConfig.color, this.config.door.defaultColor);
-
-    // prepare style with display
-    var style =
-      'margin-left:' + doorConfig.left + 'px;margin-top:' + doorConfig.top + 'px;position:absolute;';
-
-    // if radius is set, it's a wing with a radius
-    if (typeof doorConfig.radius !== 'undefined') {
-      var radius = doorConfig.radius;
-      style +=
-        this.getRadiusStyle(radius, doorConfig.midPoint) + 'height:' + radius + 'px;width:' + radius + 'px;';
-    } else {
-      // otherwise it's a rectangular door with width and height
-      style += 'height:' + doorConfig.height + 'px;width:' + doorConfig.width + 'px;';
-    }
-
-    // create div representing the door
-    var doorDiv = document.createElement('div');
-    doorDiv.id = 'mqtt_' + item;
-    doorDiv.style.cssText = 'background:' + color + ';' + style; // set color, display, and type-specific style
-    return doorDiv;
-  },
-
-  getRadiusStyle: function (radius, midPoint) {
-    // Used as part of the Door Quadrant behaviour
-    // example from: http://1stwebmagazine.com/css-quarter-circle
-    var radiusBounds = '0 0 ' + radius + 'px 0;'; // default: top-left
-    if (midPoint == 'top-right') {
-      radiusBounds = '0 0 0 ' + radius + 'px;';
-    } else if (midPoint == 'bottom-left') {
-      radiusBounds = '0 ' + radius + 'px 0 0;';
-    } else if (midPoint == 'bottom-right') {
-      radiusBounds = radius + 'px 0 0 0;';
-    }
-    return (
-      'border-radius: ' +
-      radiusBounds +
-      ' -moz-border-radius: ' +
-      radiusBounds +
-      ' -webkit-border-radius: ' +
-      radiusBounds
-    );
+    return el;
   },
 
   getSpecificOrDefault: function (specificValue, defaultValue) {
