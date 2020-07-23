@@ -61,6 +61,12 @@ Module.register('MMM-MQTTfloorplan', {
       height: 24,
       defaultStatus: 'none',
     },
+    fan: {
+      image: 'fan.png',
+      width: 19,
+      height: 19,
+      defaultStatus: 'none',
+    },
 
     subscriptions: [
       // Some examples of allowable entries in the Config file:
@@ -228,8 +234,11 @@ Module.register('MMM-MQTTfloorplan', {
         element.innerHTML = "<img src='" + this.file('/images/' + image) + "' />";
       }
     } else if (config.type === 'speaker') {
-      var visible = state.includes('TRUE'),
-        image = this.config.gates.imageSpeaker;
+      var visible = state.includes('TRUE');
+
+      this.setVisible('mqtt_' + index, visible);
+    } else if (config.type === 'fan') {
+      var visible = state.includes('TRUE');
 
       this.setVisible('mqtt_' + index, visible);
     }
@@ -289,6 +298,7 @@ Module.register('MMM-MQTTfloorplan', {
       if (type === 'gates') floorplan.appendChild(this.getGatesDiv(index, display));
       if (type === 'motion') floorplan.appendChild(this.getMotionDiv(index, display));
       if (type === 'speaker') floorplan.appendChild(this.getSpeakerDiv(index, display));
+      if (type === 'fan') floorplan.appendChild(this.getFanDiv(index, display));
     }
   },
 
@@ -480,6 +490,39 @@ Module.register('MMM-MQTTfloorplan', {
       this.config.speaker.height +
       'px;width:' +
       this.config.speaker.width +
+      "px;'/>";
+    return el;
+  },
+
+  getFanDiv: function (index, position) {
+    // set style: display
+    var style =
+      'margin-left:' +
+      position.left +
+      'px;margin-top:' +
+      position.top +
+      'px;position:absolute;' +
+      'height:' +
+      this.config.fan.height +
+      'px;width:' +
+      this.config.fan.width +
+      'px;';
+
+    // create div, set style and text
+    var el = document.createElement('div');
+    el.id = 'mqtt_' + index;
+    el.classList.add('MQTT-floorplan__speaker');
+    el.setAttribute('data-name', position.label);
+    el.style.cssText = style;
+    el.style.display = this.config.fan.defaultStatus;
+    el.innerHTML =
+      "<img src='" +
+      this.file('/images/' + this.config.fan.image) +
+      "' style='" +
+      'height:' +
+      this.config.fan.height +
+      'px;width:' +
+      this.config.fan.width +
       "px;'/>";
     return el;
   },
